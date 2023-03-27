@@ -103,11 +103,21 @@ disable_pass_ssh() {
     fi
 }
 
+conf_iptables() {
+    sudo iptables -F
+    sudo iptables -P INPUT DROP
+    sudo iptables -A INPUT -p icmp -j REJECT --reject-with icmp-port-unreachable
+    sudo iptables -A INPUT -s 192.168.0.0/16 -j ACCEPT
+    sudo mkdir -p /etc/iptables
+    sudo iptables-save > /etc/iptables/rules.v4
+}
+
 # start point of the script
-mount_iso
-installpackages
-check_for_packages
-addusers_and_pass
-lv_create
-swap_create
-disable_pass_ssh
+# mount_iso
+# installpackages
+# check_for_packages
+# addusers_and_pass
+# lv_create
+# swap_create
+# disable_pass_ssh
+conf_iptables
