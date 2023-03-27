@@ -5,6 +5,7 @@ mount_dir="/home/admini/packages/iso"
 mounted=1
 packages=("net-tools" "bird" "lldp" "openssh-server")
 users=("d.alexeev" "s.ivannikov")
+pass_disable=0
 
 mount_iso() {
     if [ -d "$mount_dir" ];
@@ -75,9 +76,38 @@ swap_create() {
     echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
 }
 
+# and disable root auth
+disable_pass_ssh() {
+    for user in ${users[@]};
+    do
+        if [ "$(sudo du "/home/$user/.ssh/authorized_keys" | awk '{print $1}')" -ne 0 ];
+        then
+            echo ".pub for $user ..."
+            pass_disable=1
+        else
+            echo "'authorized_keys' file of $user is empty! pls, pass public keys from local machine!"
+            pass_disable=0
+            exit 1
+        fi
+    done
+    if [ $pass_disable == 1 ];
+    then
+        sudo sed -i '/PasswordAuthentication/c\PasswordAuthentication no' /etc/ssh/sshd_config
+        sudo sed -i '/PubkeyAuthentication/c\PubkeyAuthentication yes' /etc/ssh/sshd_config
+        sudo sed -i '/ChallengeResponseAuthentication/c\ChallengeResponseAuthentication no' /etc/ssh/sshd_config
+
+        # disable root auth
+        sudo sed -i '/PermitRootLogin/c\PermitRootLogin no' /etc/ssh/sshd_config
+
+        sudo systemctl reload ssh
+    fi
+}
+
 # start point of the script
-mount_iso()
+mount_iso
 installpackages
 check_for_packages
 addusers_and_pass
 lv_create
+swap_create
+disable_pass_ssh
